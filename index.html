@@ -139,6 +139,11 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
 .ver{border:1px solid var(--line);border-radius:10px;margin-top:12px;overflow:hidden}
 .ver header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:var(--sunken)}
 .ver header b{font-size:14.5px}
+.score{font:700 15px/1 var(--font-mono);background:var(--ink);color:var(--surface);border-radius:4px;padding:4px 7px}
+.score small{font-size:11px;font-weight:500;margin-left:2px}
+.parts{display:flex;flex-wrap:wrap;gap:2px 14px;padding:8px 12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.parts b{font-family:var(--font-mono);color:var(--ink)}
+.rank{margin:12px 0 0;font-size:14px;font-weight:700}
 .ver header .angle{color:var(--muted);font-size:13px}
 .meter{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px}
 .meter .n{font:700 15px/1 var(--font-mono);background:var(--mark);color:var(--mark-ink);border-radius:4px;padding:4px 7px}
@@ -277,7 +282,7 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
         <ol class="steps">
           <li>複製指令。裡面已經包含左邊的設定和勾選的參考口播。</li>
           <li>貼到 AI 的新對話送出。Claude、ChatGPT、Gemini、Grok 都可以，用的是你自己的帳號。</li>
-          <li>把 AI 寫好的稿子貼到下面第 4 步檢查。</li>
+          <li>把 AI 寫好的稿子貼到下面第 4 步，每一版會有分數和檢查結果。</li>
         </ol>
         <div class="mrow">
           <button class="btn primary" type="button" id="btnCopy">複製指令</button>
@@ -289,16 +294,16 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
       </section>
 
       <section class="panel" aria-labelledby="h4s">
-        <div class="ph"><h2 id="h4s"><span class="stepno">4</span>檢查稿子</h2></div>
+        <div class="ph"><h2 id="h4s"><span class="stepno">4</span>評分和檢查</h2></div>
         <label class="sr" for="draft">把 AI 寫的稿子貼在這裡</label>
         <textarea id="draft" placeholder="把 AI 的回覆整段貼在這裡。也可以貼自己寫的稿子。"></textarea>
         <div class="mrow" style="margin-top:10px">
-          <button class="btn primary" type="button" id="btnCheck">檢查稿子</button>
+          <button class="btn primary" type="button" id="btnCheck">評分和檢查</button>
           <button class="btn quiet small" type="button" id="btnClear">清空</button>
           <span class="status" id="checkStatus" role="status" aria-live="polite"></span>
         </div>
         <div id="checkOut"></div>
-        <p class="fine" id="checkFine" hidden>秒數是用這個頻道過去口播的語速估的，實際會因主持人當天的狀態而不同。標紅的字是用詞提醒，不是法律意見；不一定不能說，但請有人看過再用。</p>
+        <p class="fine" id="checkFine" hidden>分數滿分 100，是照規則算的：長度 25、用詞 25、下單資訊 20、優惠資訊 15、結構 15。它只看稿子本身寫得完不完整，不代表賣得好不好；銷量數據累積夠了之後會再加進來。秒數是用這個頻道過去口播的語速估的，實際會因主持人當天的狀態而不同。標紅的字是用詞提醒，不是法律意見；不一定不能說，但請有人看過再用。</p>
       </section>
     </div>
   </main>
@@ -561,64 +566,94 @@ $("btnCopy").addEventListener("click", async () => {
 
 /* ---------- 第 4 步：檢查 ---------- */
 const RISK = [
-  { name:"疾病或治療的說法", health:true, re:/治療|治疗|治癒|治愈|治好|根治|療效|疗效|藥效|药效|痊癒|痊愈|治病|抗癌|防癌|癌症|腫瘤|肿瘤|降血壓|降血压|降血糖|降血脂|高血壓|高血压|糖尿病|心臟病|心脏病|關節炎|关节炎|類風濕|类风湿|中風|中风|失智|癡呆|痴呆|消炎|殺菌|杀菌|抗病毒|新冠|預防[^，。！？、\s]{0,6}(?:病|癌|感染|感冒)|预防[^，。！？、\s]{0,6}(?:病|癌|感染|感冒)|特效|神藥|神药|包治/g },
-  { name:"保證效果", health:false, re:/保證|保证|一定有效|一定會好|一定会好|絕對有效|绝对有效|百分之百|100\s*%|立刻見效|立刻见效|馬上見效|马上见效|立即見效|立即见效|藥到病除|药到病除|無副作用|无副作用|沒有副作用|没有副作用/g },
-  { name:"代替藥物或看醫生", health:true, re:/不用吃藥|不用吃药|代替藥|代替药|取代藥|取代药|停藥|停药|不用看醫生|不用看医生|比吃藥|比吃药/g },
-  { name:"絕對的說法", health:false, re:/最好的|最有效|第一名|全球第一|世界第一|全網最|全网最|史上最|唯一/g }
+  { name:"疾病或治療的說法", health:true, pen:13, re:/治療|治疗|治癒|治愈|治好|根治|療效|疗效|藥效|药效|痊癒|痊愈|治病|抗癌|防癌|癌症|腫瘤|肿瘤|降血壓|降血压|降血糖|降血脂|高血壓|高血压|糖尿病|心臟病|心脏病|關節炎|关节炎|類風濕|类风湿|中風|中风|失智|癡呆|痴呆|消炎|殺菌|杀菌|抗病毒|新冠|預防[^，。！？、\s]{0,6}(?:病|癌|感染|感冒)|预防[^，。！？、\s]{0,6}(?:病|癌|感染|感冒)|特效|神藥|神药|包治/g },
+  { name:"保證效果", health:false, pen:10, re:/保證|保证|一定有效|一定會好|一定会好|絕對有效|绝对有效|百分之百|100\s*%|立刻見效|立刻见效|馬上見效|马上见效|立即見效|立即见效|藥到病除|药到病除|無副作用|无副作用|沒有副作用|没有副作用/g },
+  { name:"代替藥物或看醫生", health:true, pen:13, re:/不用吃藥|不用吃药|代替藥|代替药|取代藥|取代药|停藥|停药|不用看醫生|不用看医生|比吃藥|比吃药/g },
+  { name:"絕對的說法", health:false, pen:5, re:/最好的|最有效|第一名|全球第一|世界第一|全網最|全网最|史上最|唯一/g }
 ];
 function parseVersions(raw){
-  const cut = raw.replace(/\*\*/g,"").split(/【\s*提醒\s*】/)[0];
-  const re = /【\s*版本\s*([0-9一二三四五六七八九十]+)\s*[｜|:：\-—]?\s*([^】]*)】/g;
+  const txt = raw.replace(/\*\*/g, "");
+  const tip = txt.search(/^[ \t#>【\[]*提醒[ \t]*[】\]:：]/m);
+  const cut = tip >= 0 ? txt.slice(0, tip) : txt;
+  /* 標題寫成【版本1｜角度】、## 版本1：角度、版本一 - 角度 都認得 */
+  const re = /^[ \t#>【\[]*版本[ \t]*([0-9一二三四五六七八九十]+)[ \t]*[｜|:：\-—、.]?[ \t]*([^\n】\]]*)[】\]]?[ \t]*$/gm;
   const marks = []; let m;
   while((m = re.exec(cut))) marks.push({ i:m.index, end:re.lastIndex, no:m[1], angle:m[2].trim() });
   if(!marks.length) return cut.trim() ? [{ name:"貼上的稿子", angle:"", text:cut.trim() }] : [];
   return marks.map((k,j) => ({ name:"版本 " + k.no, angle:k.angle, text:cut.slice(k.end, j+1 < marks.length ? marks[j+1].i : cut.length).trim() })).filter(v => v.text);
 }
 const spoken = t => t.replace(/^\s*(引入句?|正文|回正題句?|回正题句?|行動呼籲|行动呼吁)\s*[:：]/gm, "").replace(/〔[^〕]*〕/g, "");
+const digits = s => (s.replace(/,/g,"").match(/\d+(?:\.\d+)?/g) || []);
+/* 規則分，滿分 100：長度 25、用詞 25、下單資訊 20、優惠資訊 15、結構 15。只看稿子本身，不含銷量。 */
 function checkOne(v, c){
   const rate = CH[c.ch].rate, health = HEALTH_CATS.has(c.cat);
-  const n = countChars(spoken(v.text)), sec = Math.round(n / rate);
-  const diff = (sec - c.sec) / c.sec;
-  const items = [];
+  const say = spoken(v.text), n = countChars(say), sec = Math.round(n / rate);
+  const diff = (sec - c.sec) / c.sec, ad = Math.abs(diff);
+  const items = [], sc = {};
   /* 長度 */
-  if(Math.abs(diff) <= 0.15) items.push(["good", "長度合適：約 " + n + " 字，估 " + sec + " 秒（目標 " + c.sec + " 秒）。"]);
+  sc.len = ad <= 0.10 ? 25 : ad <= 0.15 ? 20 : Math.max(0, Math.round(20 * (1 - (ad - 0.15) / 0.35)));
+  if(ad <= 0.15) items.push(["good", "長度合適：約 " + n + " 字，估 " + sec + " 秒（目標 " + c.sec + " 秒）。"]);
   else items.push(["warn", (diff > 0 ? "偏長" : "偏短") + "：約 " + n + " 字，估 " + sec + " 秒，目標是 " + c.sec + " 秒，差了 " + Math.abs(sec - c.sec) + " 秒。"]);
-  /* 用詞提醒 */
-  const hits = [];
+  /* 用詞 */
+  const hits = []; let pen = 0;
   RISK.forEach(r => {
     if(r.health && !health) return;
     const found = [...new Set(v.text.match(r.re) || [])];
-    if(found.length) { items.push(["bad", r.name + "：" + found.join("、")]); hits.push(...found); }
+    if(found.length){ items.push(["bad", r.name + "：" + found.join("、")]); hits.push(...found); pen += r.pen; }
   });
+  sc.word = Math.max(0, 25 - pen);
   if(!hits.length) items.push(["good", "沒有找到療效、保證效果或絕對化的用詞。"]);
-  /* 優惠碼、下單方式 */
-  if(c.code){
-    const k = (v.text.toLowerCase().split(c.code.toLowerCase()).length - 1);
-    items.push(k ? ["good", "優惠碼 " + c.code + " 講了 " + k + " 次。"] : ["bad", "沒有講到優惠碼 " + c.code + "。"]);
-  }
+  /* 下單資訊 */
   const ctaRe = /連結|链接|描述欄|描述栏|說明欄|说明栏|二維碼|二维码|QR|掃碼|扫码|掃描|扫描|電話|电话|撥打|拨打|官網|官网|網站|网站|留言|發送|发送|\.com|\.net|\.us|\.club/i;
-  items.push(ctaRe.test(v.text) ? ["good", "有講怎麼下單或怎麼參加。"] : ["bad", "沒有講怎麼下單（連結、二維碼、電話等）。"]);
-  if(/〔[^〕]*〕/.test(v.text)) items.push(["warn", "稿子裡還有〔〕留白的地方，要補上才能用。"]);
-  /* 數字核對：稿子裡的數字，不在你填的資料裡的列出來 */
-  const digits = s => (s.replace(/,/g,"").match(/\d+(?:\.\d+)?/g) || []);
+  const ctaOk = ctaRe.test(v.text);
+  let k = 0;
+  if(c.code){
+    k = v.text.toLowerCase().split(c.code.toLowerCase()).length - 1;
+    items.push(k >= 2 ? ["good", "優惠碼 " + c.code + " 講了 " + k + " 次。"] : k === 1 ? ["warn", "優惠碼 " + c.code + " 只講了 1 次，建議結尾前再講一次。"] : ["bad", "沒有講到優惠碼 " + c.code + "。"]);
+  }
+  items.push(ctaOk ? ["good", "有講怎麼下單或怎麼參加。"] : ["bad", "沒有講怎麼下單（連結、二維碼、電話等）。"]);
+  sc.cta = c.code ? (ctaOk ? 10 : 0) + (k >= 2 ? 10 : k === 1 ? 7 : 0) : (ctaOk ? 20 : 0);
+  /* 優惠資訊：你填的優惠數字講到幾個；有沒有多出來的數字 */
+  const offerNums = [...new Set(digits(c.offer.join(" ")))], said = new Set(digits(say));
+  const missing = offerNums.filter(d => !said.has(d));
   const known = new Set(digits(c.offer.join(" ") + " " + c.cta.join(" ") + " " + c.code + " " + c.topic + " " + c.extra));
-  const nums = [...new Set((spoken(v.text).match(/\$?\d+(?:[.,]\d+)*\s*(?:%|折|美元|美金|元|塊|块|支|瓶|盒|天|個月|个月|年|號|号|位)?/g) || []).map(s => s.trim()))]
+  const nums = [...new Set((say.match(/\$?\d+(?:[.,]\d+)*\s*(?:%|折|美元|美金|元|塊|块|支|瓶|盒|天|個月|个月|年|號|号|位)?/g) || []).map(s => s.trim()))]
     .filter(s => { const d = digits(s)[0]; return d && !known.has(d); });
+  sc.offer = (offerNums.length ? Math.round(10 * (offerNums.length - missing.length) / offerNums.length) : 10) + (nums.length ? 0 : 5);
+  if(offerNums.length) items.push(missing.length ? ["warn", "你填的優惠裡，這些數字稿子沒講到：" + missing.join("、")] : ["good", "你填的優惠數字都講到了。"]);
   if(nums.length) items.push(["warn", "這些數字不在你填的優惠資料裡，請核對是不是 AI 自己加的：" + nums.join("、")]);
+  /* 結構 */
+  const hasLead = /^\s*引入句?\s*[:：]\s*\S/m.test(v.text), hasRet = /^\s*回正[題题]句?\s*[:：]\s*\S/m.test(v.text);
+  const blank = /〔[^〕]*〕/.test(v.text);
+  sc.form = (hasLead ? 5 : 0) + (hasRet ? 5 : 0) + (blank ? 0 : 5);
+  if(!hasLead || !hasRet) items.push(["warn", "沒有標出" + [hasLead ? "" : "引入句", hasRet ? "" : "回正題句"].filter(Boolean).join("和") + "（要用「引入：」「回正題：」開頭才認得）。"]);
+  if(blank) items.push(["warn", "稿子裡還有〔〕留白的地方，要補上才能用。"]);
+  let total = sc.len + sc.word + sc.cta + sc.offer + sc.form;
+  /* 長度不到目標一半的稿子，其他項目拿滿也不算數：總分按長度比例打折 */
+  const half = c.sec * 0.5;
+  if(sec < half){ total = Math.round(total * sec / half); items.push(["warn", "長度不到目標的一半，總分已按比例打折。"]); }
   /* 標紅 */
   let body = esc(v.text);
   [...new Set(hits)].sort((a,b) => b.length - a.length).forEach(h => { body = body.split(esc(h)).join("<mark>" + esc(h) + "</mark>"); });
-  const off = Math.abs(diff) > 0.15;
-  return '<article class="ver"><header><b>' + esc(v.name) + "</b>" + (v.angle ? '<span class="angle">' + esc(v.angle) + "</span>" : "") +
-    '<span class="meter"><span class="n' + (off ? " off" : "") + '">' + sec + " 秒</span><span>" + n + " 字</span></span></header>" +
+  const part = (label, got, max) => "<span>" + label + " <b>" + got + "</b>/" + max + "</span>";
+  const html = '<article class="ver"><header><span class="score">' + total + "<small>分</small></span><b>" + esc(v.name) + "</b>" + (v.angle ? '<span class="angle">' + esc(v.angle) + "</span>" : "") +
+    '<span class="meter"><span class="n' + (ad > 0.15 ? " off" : "") + '">' + sec + " 秒</span><span>" + n + " 字</span></span></header>" +
+    '<div class="parts">' + part("長度", sc.len, 25) + part("用詞", sc.word, 25) + part("下單資訊", sc.cta, 20) + part("優惠資訊", sc.offer, 15) + part("結構", sc.form, 15) + "</div>" +
     '<div class="body">' + body + "</div>" +
     '<ul class="findings">' + items.map(it => '<li class="' + it[0] + '"><span class="i" aria-hidden="true">' + ({good:"✓",warn:"!",bad:"✕"}[it[0]]) + "</span><span>" + esc(it[1]) + "</span></li>").join("") + "</ul></article>";
+  return { html, total, name: v.name, risky: hits.length > 0 };
 }
 $("btnCheck").addEventListener("click", () => {
   const vs = parseVersions($("draft").value), st = $("checkStatus"), c = cur();
   if(!vs.length){ st.className = "status bad"; st.textContent = "還沒有貼稿子。"; $("checkOut").innerHTML = ""; $("checkFine").hidden = true; return; }
-  st.className = "status"; st.textContent = "讀到 " + vs.length + " 版，用「" + CH[c.ch].name + "」的語速和左邊的設定檢查。";
-  $("checkOut").innerHTML = vs.map(v => checkOne(v, c)).join("");
+  st.className = "status"; st.textContent = "讀到 " + vs.length + " 版，用「" + CH[c.ch].name + "」的語速和左邊的設定評分。";
+  const res = vs.map(v => checkOne(v, c));
+  let rank = "";
+  if(res.length > 1){
+    const best = res.slice().sort((a,b) => b.total - a.total)[0];
+    rank = '<p class="rank">分數最高的是' + esc(best.name) + "（" + best.total + " 分）" + (best.risky ? "，但裡面有標紅的用詞，要先改。" : "。") + "</p>";
+  }
+  $("checkOut").innerHTML = rank + res.map(r => r.html).join("");
   $("checkFine").hidden = false;
 });
 $("btnClear").addEventListener("click", () => { $("draft").value = ""; $("checkOut").innerHTML = ""; $("checkStatus").textContent = ""; $("checkFine").hidden = true; });
