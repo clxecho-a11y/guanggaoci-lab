@@ -107,6 +107,13 @@ input.num{font-family:var(--font-mono)}
 .secrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .secrow input{width:84px}
 .secrow i{font-style:normal;color:var(--muted);font-size:13px}
+.prow{display:grid;grid-template-columns:auto 92px 76px auto minmax(0,1fr);gap:8px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0;padding-top:2px}
+.prow b{font-size:14px;white-space:nowrap}
+.prow i{font-style:normal;color:var(--muted);font-size:13px}
+.prow .prole{font-size:13px;color:var(--muted);line-height:1.5}
+.parthd{margin:10px 0 4px;font-size:13px;font-weight:700;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.script .parthd:first-child{margin-top:0}
 
 .tag{font-size:12px;font-weight:500;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:2px 7px;white-space:nowrap}
 .tag.plain{color:var(--muted);background:var(--sunken)}
@@ -164,8 +171,9 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
 .findings .bad .i{color:var(--bad)}
 .fine{margin-top:10px;font-size:12.5px;color:var(--muted)}
 
-.filters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.5fr);gap:10px 12px;margin-bottom:14px}
+.filters{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px 12px;margin-bottom:14px}
 .filters label{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.filters label.q{grid-column:1/-1}
 .lib{display:grid;gap:10px;list-style:none;margin:0;padding:0}
 .card{border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .card .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px 14px;align-items:start}
@@ -185,6 +193,8 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
   .wrap{padding:14px 12px 48px}
   h1{font-size:21px}
   .field,.field.half{grid-column:1/-1}
+  .prow{grid-template-columns:auto 92px 76px auto}
+  .prow .prole{grid-column:1/-1}
   .panel{padding:14px}
   .card .row{grid-template-columns:minmax(0,1fr)}
   .card .acts{justify-content:flex-start}
@@ -218,7 +228,17 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
           <label class="field half"><span>頻道</span><select id="fCh"></select></label>
           <label class="field half"><span>推廣什麼</span><select id="fCat"></select></label>
           <label class="field wide" id="fOtherWrap" hidden><span>產品名稱</span><input type="text" id="fOther" placeholder="例：某某面膜"></label>
-          <fieldset class="field half"><legend>廣告位</legend>
+          <fieldset class="field wide"><legend>怎麼講</legend>
+            <div class="seg" id="fMode">
+              <label><input type="radio" name="mode" value="1" checked><span>一段講完</span></label>
+              <label><input type="radio" name="mode" value="2"><span>分 2 段</span></label>
+              <label><input type="radio" name="mode" value="3"><span>分 3 段</span></label>
+            </div>
+            <span class="hint" id="modeHint"></span></fieldset>
+          <fieldset class="field wide" id="partsWrap" hidden><legend>各段安排（位置和秒數可以改）</legend>
+            <div id="partsBox"></div>
+            <span class="hint" id="partsHint"></span></fieldset>
+          <fieldset class="field half" id="slotWrap"><legend>廣告位</legend>
             <div class="seg" id="fSlot">
               <label><input type="radio" name="slot" value="第一廣告位" checked><span>第一（前半段）</span></label>
               <label><input type="radio" name="slot" value="第二廣告位"><span>第二（後半段）</span></label>
@@ -232,7 +252,7 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
               <label><input type="radio" name="fmt" value="訪談"><span>訪談</span></label>
             </div></fieldset>
 
-          <fieldset class="field wide"><legend>口播長度</legend>
+          <fieldset class="field wide" id="lenWrap"><legend>口播長度</legend>
             <div class="secrow">
               <div class="seg" id="fBucket">
                 <label><input type="radio" name="bucket" value="45"><span>60 秒內</span></label>
@@ -276,7 +296,7 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
 
       <section class="panel" aria-labelledby="h2s">
         <div class="ph"><h2 id="h2s"><span class="stepno">2</span>參考口播</h2><span class="meta" id="refMeta"></span></div>
-        <p class="hint" style="margin:-6px 0 8px">這個頻道自己講過的口播，勾起來的會放進指令裡，讓 AI 學主持人的語氣和帶入方式。標「銷量高於平常」的排最前面，再看同廣告位、長度相近的；標「低於平常」的排最後。</p>
+        <p class="hint" style="margin:-6px 0 8px" id="refHint"></p>
         <p class="note" id="saleNote"></p>
         <ul class="refs" id="refList"></ul>
         <div class="more" id="refMoreWrap" hidden><button class="btn small" type="button" id="refMore">顯示更多</button></div>
@@ -310,7 +330,7 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
           <span class="status" id="checkStatus" role="status" aria-live="polite"></span>
         </div>
         <div id="checkOut"></div>
-        <p class="fine" id="checkFine" hidden>分數滿分 100，是照規則算的：長度 25、用詞 25、下單資訊 20、優惠資訊 15、結構 15。它只看稿子本身寫得完不完整，不代表賣得好不好；銷量數據累積夠了之後會再加進來。秒數是用這個頻道過去口播的語速估的，實際會因主持人當天的狀態而不同。標紅的字是用詞提醒，不是法律意見；不一定不能說，但請有人看過再用。</p>
+        <p class="fine" id="checkFine" hidden>分數滿分 100，是照規則算的：長度 25、用詞 25、下單資訊 20、優惠資訊 15、結構 15。它只看稿子本身寫得完不完整，不代表賣得好不好；銷量數據累積夠了之後會再加進來。分段講的稿子，長度是每一段各自和目標比，優惠碼要每一段都講到。秒數是用這個頻道過去口播的語速估的，實際會因主持人當天的狀態而不同。標紅的字是用詞提醒，不是法律意見；不一定不能說，但請有人看過再用。</p>
       </section>
     </div>
   </main>
@@ -324,6 +344,7 @@ details.peek summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
         <label>廣告位<select id="lSlot"><option value="">全部</option><option>第一廣告位</option><option>第二廣告位</option></select></label>
         <label>長度<select id="lBucket"><option value="">全部</option><option value="<60s">60 秒內</option><option value="60-90s">60–90 秒</option><option value=">90s">90 秒以上</option></select></label>
         <label>當天銷量<select id="lSale"><option value="">全部</option><option value="hi">高於平常</option><option value="mid">接近平常</option><option value="lo">低於平常</option><option value="none">還沒有標記</option></select></label>
+        <label>講法<select id="lMode"><option value="">全部</option><option value="1">一段講完</option><option value="m">分段講</option></select></label>
         <label>側重點<select id="lFocus"><option value="">全部</option><option>產品效能（含案例）</option><option>節日促銷</option><option>訂閱制</option><option>福利贈品</option></select></label>
         <label class="q">搜尋口播內容<input type="search" id="lQ" placeholder="例：黑五、免單、滴劑"></label>
       </div>
@@ -375,7 +396,18 @@ function saleTags(s, cat){
 $("stamp").textContent = "所有時間為美東時間（ET）。口播資料涵蓋 " + md(D.from) + " 到 " + md(D.to) + " 的節目，共 " + D.channels.length + " 個頻道、" + D.segs.length + " 段口播；資料產生於 " + D.built + " ET。其中 " + D.segs.filter(s => s.sale).length + " 段產品口播有銷量標記（初步、樣本少）。";
 
 /* ---------- 狀態 ---------- */
-const state = { picked:new Set(), picksDirty:false, refLimit:6, offerDirty:false, ctaDirty:false, codeDirty:false, libLimit:30 };
+/* 分段講的預設安排。來自資料裡實際分段講的口播：分 2 段的多半前後各一段、每段一分鐘左右；
+   分 3 段的多半是片頭短預告、中段詳細講、片尾再提醒。 */
+const PLAN = {
+  2: [ { pos:"前段", sec:60, role:"完整介紹：產品是什麼、本檔優惠、優惠碼、怎麼下單" },
+       { pos:"後段", sec:55, role:"換一個角度再講（另一個使用場景、送禮、觀眾回饋），重提優惠、優惠碼和期限" } ],
+  3: [ { pos:"片頭", sec:30, role:"預告：一兩句話講出本檔最大的優惠和優惠碼，說稍後詳細介紹" },
+       { pos:"中段", sec:60, role:"詳細說明：產品、完整優惠、優惠碼、怎麼下單" },
+       { pos:"片尾", sec:40, role:"最後提醒：期限、優惠碼、怎麼下單，可以加一個前面沒講過的角度" } ]
+};
+const POS = ["片頭","前段","中段","後段","片尾"];
+const POS_TXT = { "片頭":"節目開頭（片頭）", "前段":"節目前段", "中段":"節目中段", "後段":"節目後段", "片尾":"節目結尾（片尾）" };
+const state = { plan:{ 2:PLAN[2].map(p => ({...p})), 3:PLAN[3].map(p => ({...p})) }, pickedSets:new Set(), picked:new Set(), picksDirty:false, refLimit:6, offerDirty:false, ctaDirty:false, codeDirty:false, libLimit:30 };
 
 /* ---------- 第 1 步：設定 ---------- */
 D.channels.forEach(c => { $("fCh").add(new Option(c.name, c.slug)); });
@@ -386,11 +418,12 @@ if(saved.lang) $("fLang").value = saved.lang;
 if(saved.n) $("fN").value = saved.n;
 
 function cur(){
-  const cat = $("fCat").value;
+  const cat = $("fCat").value, mode = +radio("mode") || 1;
+  const parts = mode > 1 ? state.plan[mode].map(p => ({...p})) : null;
   return {
-    ch: $("fCh").value, cat,
+    ch: $("fCh").value, cat, mode, parts,
     product: cat === "其他產品" ? ($("fOther").value.trim() || "（請填產品名稱）") : cat,
-    slot: radio("slot"), sec: Math.max(15, +$("fSec").value || 75), fmt: radio("fmt"),
+    slot: radio("slot"), sec: parts ? parts.reduce((a,p) => a + p.sec, 0) : Math.max(15, +$("fSec").value || 75), fmt: radio("fmt"),
     focus: [...document.querySelectorAll("#fFocus input:checked")].map(i => i.value),
     topic: $("fTopic").value.trim(), offer: lines($("fOffer").value), cta: lines($("fCta").value),
     code: $("fCode").value.trim(), n: Math.min(6, Math.max(1, +$("fN").value || 3)),
@@ -399,6 +432,26 @@ function cur(){
 }
 const bucketOf = sec => sec < 60 ? "<60s" : sec <= 90 ? "60-90s" : ">90s";
 const pool = (ch, cat) => D.segs.filter(s => s.ch === ch && (!cat || s.cats.includes(cat)));
+/* 同一集裡同一個產品的口播算一組（主持人常把一個廣告分成幾段，穿插在節目裡講） */
+const epOf = s => s.ch + "|" + s.id.slice(0, s.id.lastIndexOf("-"));
+function setsOf(ch, cat){
+  const m = new Map();
+  pool(ch, cat).forEach(s => { if(s.kind === "抽獎公布") return; const k = epOf(s); if(!m.has(k)) m.set(k, []); m.get(k).push(s); });
+  return [...m.entries()].map(([key, segs]) => ({ key, segs: segs.slice().sort((a,b) => (a.start || 0) - (b.start || 0)), date: segs[0].date }));
+}
+const SETINFO = {};
+D.segs.forEach(s => { if(s.kind === "抽獎公布") return; s.cats.forEach(cat => {
+  const same = D.segs.filter(x => epOf(x) === epOf(s) && x.cats.includes(cat) && x.kind !== "抽獎公布").sort((a,b) => (a.start || 0) - (b.start || 0));
+  if(!SETINFO[s.id] || same.length > SETINFO[s.id].n) SETINFO[s.id] = { n: same.length, i: same.indexOf(s) + 1 };
+}); });
+function renderParts(){
+  const mode = +radio("mode") || 1;
+  $("partsBox").innerHTML = mode > 1 ? state.plan[mode].map((p,i) =>
+    '<div class="prow" data-i="' + i + '"><b>第 ' + (i+1) + ' 段</b>' +
+    '<select class="ppos" aria-label="第 ' + (i+1) + ' 段的位置">' + POS.map(x => '<option' + (x === p.pos ? " selected" : "") + ">" + x + "</option>").join("") + "</select>" +
+    '<input class="num psec" type="number" min="10" max="240" step="5" value="' + p.sec + '" aria-label="第 ' + (i+1) + ' 段的秒數"><i>秒</i>' +
+    '<span class="prole">' + esc(p.role) + "</span></div>").join("") : "";
+}
 
 /* 換頻道或產品時，從這個頻道最近一次同產品的口播帶入優惠、下單方式、優惠碼（使用者改過就不覆蓋） */
 function prefill(){
@@ -419,6 +472,9 @@ function prefill(){
     $("fCode").value = usesCode ? (ch.code || "") : "";
   }
   $("rateHint").textContent = ch.name + "過去口播的語速大約每秒 " + ch.rate + " 字，" + c.sec + " 秒約 " + targetChars(c) + " 字。";
+  $("partsHint").textContent = c.parts ? "合計 " + c.sec + " 秒，約 " + targetChars(c) + " 字（" + ch.name + "的語速大約每秒 " + ch.rate + " 字）。每一段的作用會寫進指令裡。" : "";
+  const sz = setsOf(c.ch, c.cat), n1 = sz.filter(x => x.segs.length === 1).length, n2 = sz.filter(x => x.segs.length === 2).length, n3 = sz.filter(x => x.segs.length >= 3).length;
+  $("modeHint").textContent = sz.length ? ch.name + "過去講「" + c.product + "」：一段講完 " + n1 + " 集、分 2 段 " + n2 + " 集、分 3 段以上 " + n3 + " 集。分段講＝同一集裡把廣告拆開，穿插在節目不同位置講。" : "分段講＝同一集裡把廣告拆開，穿插在節目不同位置講。";
   $("badgeSec").textContent = c.sec;
 }
 const targetChars = c => Math.round(c.sec * CH[c.ch].rate / 10) * 10;
@@ -433,7 +489,16 @@ function ranked(){
   const list = same.slice().sort((x,y) => tier(y) - tier(x) || score(y) - score(x) || (x.date < y.date ? 1 : -1));
   return { list, fallback: false, c };
 }
+function rankedSets(c){
+  c = c || cur();
+  const tier = x => ({ hi:2, mid:1, lo:0 }[(x.segs[0].sale || {})[c.cat]] ?? 1);
+  const list = setsOf(c.ch, c.cat).filter(x => x.segs.length > 1)
+    .sort((x,y) => tier(y) - tier(x) || (y.segs.length === c.mode) - (x.segs.length === c.mode) || (x.date < y.date ? 1 : -1));
+  return { list, c };
+}
+const usingSets = c => c.mode > 1 && rankedSets(c).list.length > 0;
 function resetPicks(){
+  state.pickedSets = new Set(rankedSets().list.slice(0, 2).map(x => x.key));
   const r = refCandidates();
   /* 預設勾的幾段盡量來自不同天：同一天的口播共用同一個銷量標記，全勾同一天等於只參考一次 */
   const want = r.fallback ? 2 : 3, seen = new Set(), pick = [];
@@ -461,12 +526,46 @@ function scriptHtml(s){
   return h;
 }
 function tagsHtml(s, cat){
-  return '<span class="tc">' + s.len + " 秒</span>" + saleTags(s, cat) +
+  const si = SETINFO[s.id];
+  return '<span class="tc">' + s.len + " 秒</span>" + saleTags(s, cat) + (si && si.n > 1 ? '<span class="tag plain">這集分 ' + si.n + " 段講・第 " + si.i + " 段</span>" : "") +
     '<span class="tag plain">' + esc(s.slot || "廣告位未標") + (s.pos ? "・" + esc(s.pos) : "") + "</span>" +
     (s.fmt ? '<span class="tag plain">' + esc(s.fmt) + "</span>" : "") +
     s.focus.map(f => '<span class="tag">' + esc(f) + "</span>").join("");
 }
+function setScriptHtml(x){
+  return x.segs.map((s,i) => '<div class="parthd">第 ' + (i+1) + " 段" + (s.start != null ? '<span class="tag plain">節目 ' + esc(mmss(s.start)) + " 開始</span>" : "") +
+    '<span class="tag plain">' + esc(s.pos || "位置未標") + '</span><span class="tc">' + s.len + " 秒</span></div>" + scriptHtml(s)).join("");
+}
+function renderSetRefs(r){
+  const ul = $("refList"), c = r.c;
+  const list = r.list.filter(x => state.pickedSets.has(x.key)).concat(r.list.filter(x => !state.pickedSets.has(x.key)));
+  ul.innerHTML = list.slice(0, state.refLimit).map(x => {
+    const on = state.pickedSets.has(x.key), s0 = x.segs[0];
+    return '<li class="ref' + (on ? " on" : "") + '" data-set="' + esc(x.key) + '"><div class="row">' +
+      '<input type="checkbox" ' + (on ? "checked" : "") + ' aria-label="用這一集當參考">' +
+      '<div><div class="hd"><b>' + esc(md(x.date)) + "　" + esc(c.cat) + "　分 " + x.segs.length + " 段</b>" + saleTags(s0, c.cat) +
+      x.segs.map(s => '<span class="tag plain">' + esc(s.pos || "") + '</span><span class="tc">' + s.len + " 秒</span>").join("") +
+      (s0.fmt ? '<span class="tag plain">' + esc(s0.fmt) + "</span>" : "") + "</div>" +
+      '<p class="first">' + esc((s0.t[0] ? s0.t[0] + " " : "") + s0.t[1]) + "</p></div>" +
+      '<button class="btn small quiet" type="button" data-act="open" aria-expanded="false">看全文</button></div></li>';
+  }).join("");
+  $("refMoreWrap").hidden = list.length <= state.refLimit;
+  const mine = list.filter(x => state.pickedSets.has(x.key));
+  $("refMeta").textContent = mine.length ? "已勾 " + mine.length + " 集（共 " + mine.reduce((a,x) => a + x.segs.length, 0) + " 段），約 " + mine.reduce((a,x) => a + x.segs.reduce((b,s) => b + s.n, 0), 0) + " 字" : "沒有勾參考口播";
+}
+function saleNoteFor(c){
+  const sn = (CH[c.ch].saleN || {})[c.cat];
+  $("saleNote").innerHTML = sn ? SALE_HOW + "「" + esc(CH[c.ch].name) + "・" + esc(c.cat) + "」目前只有 <b>" + sn + " 個口播日</b>可以比較。"
+    : (HEALTH_CATS.has(c.cat) || c.cat === "藍莓優品") ? "「" + esc(CH[c.ch].name) + "・" + esc(c.product) + "」可以比較的口播日不到 4 天（或大多數日子沒有銷售），所以還沒有銷量標記，先照廣告位和長度排。" : "";
+  $("saleNote").hidden = !$("saleNote").innerHTML;
+}
 function renderRefs(){
+  const c0 = cur();
+  if(usingSets(c0)){
+    $("refHint").textContent = "這個頻道把同一個產品分成幾段講的節目，一集算一組。勾起來的會整組放進指令裡，讓 AI 學每一段各講什麼、後面的段怎麼接前面。標「銷量高於平常」的排最前面，再看段數相同的。";
+    saleNoteFor(c0); renderSetRefs(rankedSets(c0)); return;
+  }
+  $("refHint").textContent = "這個頻道自己講過的口播，勾起來的會放進指令裡，讓 AI 學主持人的語氣和帶入方式。標「銷量高於平常」的排最前面，再看同廣告位、長度相近的；標「低於平常」的排最後。";
   const r = refCandidates(), ul = $("refList");
   /* 已勾的排最前面：換了廣告位或長度、排序變了，也不會勾了卻看不到 */
   const mine = D.segs.filter(s => state.picked.has(s.id));
@@ -476,6 +575,7 @@ function renderRefs(){
     $("refMoreWrap").hidden = true; $("refMeta").textContent = ""; $("saleNote").hidden = true; return;
   }
   let html = "";
+  if(c0.mode > 1 && !r.fallback) html += '<li class="empty">' + esc(CH[c0.ch].name) + "還沒有把「" + esc(c0.product) + "」分段講過。下面是一段講完的口播，可以勾幾段讓 AI 學語氣；分段的寫法會照上面「各段安排」。</li>";
   if(r.fallback) html += '<li class="empty">' + esc(CH[r.c.ch].name) + "還沒講過「" + esc(r.c.product) + "」的口播。下面是這個頻道其他的口播，可以勾幾段讓 AI 學語氣。</li>";
   r.list.slice(0, state.refLimit).forEach(s => {
     const on = state.picked.has(s.id);
@@ -487,15 +587,26 @@ function renderRefs(){
   });
   ul.innerHTML = html;
   $("refMoreWrap").hidden = r.list.length <= state.refLimit;
-  const sn = (CH[r.c.ch].saleN || {})[r.c.cat];
-  $("saleNote").innerHTML = sn ? SALE_HOW + "「" + esc(CH[r.c.ch].name) + "・" + esc(r.c.cat) + "」目前只有 <b>" + sn + " 個口播日</b>可以比較。"
-    : (HEALTH_CATS.has(r.c.cat) || r.c.cat === "藍莓優品") ? "「" + esc(CH[r.c.ch].name) + "・" + esc(r.c.product) + "」可以比較的口播日不到 4 天（或大多數日子沒有銷售），所以還沒有銷量標記，先照廣告位和長度排。" : "";
-  $("saleNote").hidden = !$("saleNote").innerHTML;
+  saleNoteFor(r.c);
   const n = state.picked.size, chars = D.segs.filter(s => state.picked.has(s.id)).reduce((a,s) => a + s.n, 0);
   $("refMeta").textContent = n ? "已勾 " + n + " 段，約 " + chars + " 字" : "沒有勾參考口播";
 }
 $("refList").addEventListener("click", e => {
   const li = e.target.closest(".ref"); if(!li) return;
+  if(li.dataset.set){
+    const key = li.dataset.set, x = rankedSets().list.find(y => y.key === key);
+    if(e.target.matches("input[type=checkbox]")){
+      if(e.target.checked) state.pickedSets.add(key); else state.pickedSets.delete(key);
+      state.picksDirty = true; renderRefs(); buildPrompt(); return;
+    }
+    const b = e.target.closest("[data-act=open]");
+    if(b && x){
+      let box = li.querySelector(".script");
+      if(box){ box.remove(); b.textContent = "看全文"; b.setAttribute("aria-expanded","false"); }
+      else { box = document.createElement("div"); box.className = "script"; box.innerHTML = setScriptHtml(x); li.appendChild(box); b.textContent = "收起"; b.setAttribute("aria-expanded","true"); }
+    }
+    return;
+  }
   const id = li.dataset.id, s = D.segs.find(x => x.id === id);
   if(e.target.matches("input[type=checkbox]")){
     if(e.target.checked) state.picked.add(id); else state.picked.delete(id);
@@ -515,14 +626,23 @@ $("refMore").addEventListener("click", () => { state.refLimit += 10; renderRefs(
 function buildPrompt(){
   const c = cur(), ch = CH[c.ch], tc = targetChars(c);
   const health = HEALTH_CATS.has(c.cat);
-  const refs = D.segs.filter(s => state.picked.has(s.id));
+  const useSets = usingSets(c), K = c.mode;
+  const refSets = useSets ? rankedSets(c).list.filter(x => state.pickedSets.has(x.key)) : [];
+  const refs = useSets ? [] : D.segs.filter(s => state.picked.has(s.id));
+  const pc = sec => Math.round(sec * ch.rate / 10) * 10;
   const L = [];
   L.push("你是華語時政 YouTube 頻道的植入口播撰稿人（植入口播＝主持人在節目中親口講的廣告）。請替「" + ch.name + "」的主持人寫 " + c.n + " 版口播稿。");
   L.push("");
   L.push("【這次的口播】");
   L.push("- 推廣：" + c.product);
-  L.push("- 廣告位：" + (c.slot === "第一廣告位" ? "第一廣告位，放在節目前半段" : "第二廣告位，放在節目後半段"));
-  L.push("- 目標長度：約 " + c.sec + " 秒，也就是約 " + tc + " 字（這位主持人講口播的語速大約每秒 " + ch.rate + " 字）。每一版的引入、正文、回正題加起來控制在 " + Math.round(tc*0.9) + " 到 " + Math.round(tc*1.1) + " 字。");
+  if(K > 1){
+    L.push("- 講法：分 " + K + " 段，穿插在同一集節目的不同位置講（不是連著講完）。各段安排：");
+    c.parts.forEach((p,i) => L.push("  ・第" + (i+1) + "段｜放在" + POS_TXT[p.pos] + "｜約 " + p.sec + " 秒（約 " + pc(p.sec) + " 字）｜作用：" + p.role));
+    L.push("  各段合計約 " + c.sec + " 秒（這位主持人講口播的語速大約每秒 " + ch.rate + " 字）。每一段的引入、正文、回正題加起來，字數控制在那一段目標字數的 90% 到 110% 之間。");
+  } else {
+    L.push("- 廣告位：" + (c.slot === "第一廣告位" ? "第一廣告位，放在節目前半段" : "第二廣告位，放在節目後半段"));
+    L.push("- 目標長度：約 " + c.sec + " 秒，也就是約 " + tc + " 字（這位主持人講口播的語速大約每秒 " + ch.rate + " 字）。每一版的引入、正文、回正題加起來控制在 " + Math.round(tc*0.9) + " 到 " + Math.round(tc*1.1) + " 字。");
+  }
   L.push("- 節目形式：" + c.fmt + (c.fmt === "單人" ? "" : "（請寫成對話，標出誰講哪一句，用「主持人」「來賓」這類稱呼，不要自己編人名）"));
   if(c.focus.length) L.push("- 側重點：" + c.focus.join("、"));
   L.push("- 今天的節目話題：" + (c.topic || "沒有提供。引入句和回正題句請寫成通用的說法，要主持人自己接話題的地方用〔〕標出來。"));
@@ -533,11 +653,13 @@ function buildPrompt(){
   else L.push("  ・沒有提供。稿子裡不要出現任何價格、折扣或贈品，需要的地方用〔優惠內容〕留白。");
   if(c.extra) L.push("- 補充要求：" + c.extra);
   L.push("");
-  if(refs.length){
+  if(refs.length || refSets.length){
     L.push("【這個頻道講過的口播（參考）】");
     L.push("下面是同一個頻道實際播出過的口播逐字稿，從字幕轉寫，所以沒有標點。只學這幾件事：主持人的語氣和用詞、句子的節奏、怎麼從節目帶進廣告、怎麼回到正題。裡面的優惠、價格、日期可能已經過期，不要沿用；裡面如果有身體功效或病例的說法，也不要沿用。");
     const lab = s => (s.sale || {})[c.cat];
-    if(refs.some(lab)) L.push("有些參考標了當天的銷量（和這個頻道自己平常比）。標「銷量高於平常」的，可以多學它的切入角度和結構；標「銷量低於平常」的只學語氣。這個標記是初步資料、樣本少，銷量也受當時的優惠和新聞影響，不要因此照抄內容。");
+    if(refSets.length) L.push("下面每一組參考，是同一集節目裡把這個廣告分成幾段講的實際例子。除了語氣，也看這幾件事：每一段各講了什麼、哪一段講優惠細節、後面的段怎麼接前面講過的內容。");
+    else if(K > 1) L.push("這個頻道沒有分段講這個產品的紀錄，下面是一段講完的口播，只用來學語氣；分段的寫法照上面「各段安排」。");
+    if(refs.some(lab) || refSets.some(x => lab(x.segs[0]))) L.push("有些參考標了當天的銷量（和這個頻道自己平常比）。標「銷量高於平常」的，可以多學它的切入角度和結構；標「銷量低於平常」的只學語氣。這個標記是初步資料、樣本少，銷量也受當時的優惠和新聞影響，不要因此照抄內容。");
     refs.forEach((s,i) => {
       L.push("");
       L.push("〈參考 " + (i+1) + "〉" + s.date + "・" + s.adv + "・" + (s.slot || "") + "・" + s.len + " 秒・約 " + s.n + " 字" + (s.fmt ? "・" + s.fmt : "") + (lab(s) ? "・當天" + SALE_TXT[lab(s)] : ""));
@@ -546,13 +668,31 @@ function buildPrompt(){
       L.push("正文：" + s.t[1]);
       if(s.t[2]) L.push("回正題：" + s.t[2]);
     });
+    refSets.forEach((x,i) => {
+      const s0 = x.segs[0];
+      L.push("");
+      L.push("〈參考 " + (i+1) + "〉" + x.date + "・" + c.product + "・同一集分 " + x.segs.length + " 段講" + (s0.fmt ? "・" + s0.fmt : "") + (lab(s0) ? "・當天" + SALE_TXT[lab(s0)] : ""));
+      x.segs.forEach((s,j) => {
+        L.push("（第" + (j+1) + "段：" + (s.start != null ? "節目 " + mmss(s.start) + " 開始，" : "") + (s.pos || "") + "，" + s.len + " 秒，約 " + s.n + " 字）");
+        if(s.note) L.push("帶入方式：" + s.note);
+        if(s.t[0]) L.push("引入：" + s.t[0]);
+        L.push("正文：" + s.t[1]);
+        if(s.t[2]) L.push("回正題：" + s.t[2]);
+      });
+    });
     L.push("");
   }
   L.push("【寫作要求】");
   const R = [];
   R.push("寫成主持人平常說話的樣子，不要像廣告文案。句子短，唸出來順。");
   R.push("每一版用不同的切入角度，例如主持人自己的使用感受、觀眾的生活場景、優惠的時效、從今天的話題自然帶入。不要只是同一篇換句話說。");
-  R.push("每一版都要有：引入句（從節目帶進廣告）、正文、清楚的下單方式" + (c.code ? "和優惠碼（優惠碼至少講一次，最好在結尾前再講一次）" : "") + "、回正題句。");
+  if(K > 1){
+    R.push("每一版都分成 " + K + " 段，照上面「各段安排」的位置、長度和作用寫。每一段都要有自己的引入句（從節目帶進廣告）、正文和回正題句；放在片尾的那一段，回正題句寫成一句收尾的話。");
+    R.push("每一段都要能單獨聽懂：觀眾可能中途才進來，只聽到這一段也要知道是什麼產品" + (c.code ? "、優惠碼是什麼（優惠碼每一段都要講到）" : "") + "。完整的下單方式至少要在其中一段講清楚。");
+    R.push("各段不要重複同樣的內容：例子、角度、說法都要換。優惠的重點可以再提，但不要整段照念。後面的段可以用一句話呼應前面（例如「剛才跟大家提過」），但不能靠前面那段才聽得懂。");
+  } else {
+    R.push("每一版都要有：引入句（從節目帶進廣告）、正文、清楚的下單方式" + (c.code ? "和優惠碼（優惠碼至少講一次，最好在結尾前再講一次）" : "") + "、回正題句。");
+  }
   R.push("價格、折扣、贈品、期限、電話、網址只能用上面「這次的口播」裡提供的內容，一個數字都不要自己編。沒提供的就不要寫。數字一律用阿拉伯數字。");
   if(health) R.push("這是保健食品的廣告。不要說它能治療、治好或預防任何疾病，不要提具體病名和病例，不要保證效果，不要說它能代替藥物或看醫生。要講感受時，用主持人個人體驗的說法，並保留「每個人情況不同」的意思。");
   else R.push("不要保證效果，不要用「最好」「第一」「唯一」這類絕對的說法。");
@@ -563,12 +703,17 @@ function buildPrompt(){
   L.push("【輸出格式】");
   L.push("每一版照下面的格式寫，版本之間空一行，開頭不要加任何說明：");
   L.push("【版本1｜這一版的切入角度】");
-  L.push("引入：……");
-  L.push("正文：……");
-  L.push("回正題：……");
+  if(K > 1){
+    c.parts.forEach((p,i) => { L.push("〈第" + (i+1) + "段｜" + p.pos + "｜約" + p.sec + "秒〉"); L.push("引入：……"); L.push("正文：……"); L.push("回正題：……"); });
+    L.push("（每一段都要用「〈第N段｜…〉」這一行開頭，三個標籤「引入：」「正文：」「回正題：」照寫，片尾那段也用「回正題：」。）");
+  } else {
+    L.push("引入：……");
+    L.push("正文：……");
+    L.push("回正題：……");
+  }
   L.push("");
   L.push("全部版本寫完後，最後加一段：");
-  L.push("【提醒】用一兩句話說哪一版最適合這個廣告位和長度，以及有沒有哪項資訊因為沒提供而留白。");
+  L.push("【提醒】用一兩句話說哪一版最適合" + (K > 1 ? "這樣分段講" : "這個廣告位和長度") + "，以及有沒有哪項資訊因為沒提供而留白。");
   const text = L.join("\n");
   $("promptText").value = text;
   $("promptLen").textContent = text.length;
@@ -612,7 +757,18 @@ function parseVersions(raw){
   if(!marks.length) return cut.trim() ? [{ name:"貼上的稿子", angle:"", text:cut.trim() }] : [];
   return marks.map((k,j) => ({ name:"版本 " + k.no, angle:k.angle, text:cut.slice(k.end, j+1 < marks.length ? marks[j+1].i : cut.length).trim() })).filter(v => v.text);
 }
-const spoken = t => t.replace(/^\s*(引入句?|正文|回正題句?|回正题句?|行動呼籲|行动呼吁)\s*[:：]/gm, "").replace(/〔[^〕]*〕/g, "");
+const PART_RE = /^[ \t#>*〈<【\[（(]*第[ \t]*([0-9一二三四五])[ \t]*段[^\n]*$/gm;
+const spoken = t => t.replace(PART_RE, "").replace(/^\s*(引入句?|正文|回正題句?|回正题句?|收尾|結尾|结尾|行動呼籲|行动呼吁)\s*[:：]/gm, "").replace(/〔[^〕]*〕/g, "");
+/* 稿子裡用「第1段」這樣的標題分段的，拆成各段 */
+function parseParts(text){
+  const marks = []; let m; PART_RE.lastIndex = 0;
+  while((m = PART_RE.exec(text))) marks.push({ i:m.index, end:PART_RE.lastIndex });
+  if(marks.length < 2) return null;
+  return marks.map((k,j) => text.slice(k.end, j+1 < marks.length ? marks[j+1].i : text.length).trim());
+}
+const bigrams = t => { const s = (t.match(/[一-鿿]/g) || []).join(""), g = new Set(); for(let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i+2)); return g; };
+const jaccard = (a,b) => { const A = bigrams(a), B = bigrams(b); if(!A.size || !B.size) return 0; let k = 0; A.forEach(x => { if(B.has(x)) k++; }); return k / (A.size + B.size - k); };
+const lenScore = ad => ad <= 0.10 ? 25 : ad <= 0.15 ? 20 : Math.max(0, Math.round(20 * (1 - (ad - 0.15) / 0.35)));
 const digits = s => (s.replace(/,/g,"").match(/\d+(?:\.\d+)?/g) || []);
 /* 規則分，滿分 100：長度 25、用詞 25、下單資訊 20、優惠資訊 15、結構 15。只看稿子本身，不含銷量。 */
 function checkOne(v, c){
@@ -620,10 +776,22 @@ function checkOne(v, c){
   const say = spoken(v.text), n = countChars(say), sec = Math.round(n / rate);
   const diff = (sec - c.sec) / c.sec, ad = Math.abs(diff);
   const items = [], sc = {};
+  const K = c.mode, parts = parseParts(v.text), multi = K > 1 && parts && parts.length === K;
+  let pinfo = null, lenOff = ad > 0.15;
   /* 長度 */
-  sc.len = ad <= 0.10 ? 25 : ad <= 0.15 ? 20 : Math.max(0, Math.round(20 * (1 - (ad - 0.15) / 0.35)));
-  if(ad <= 0.15) items.push(["good", "長度合適：約 " + n + " 字，估 " + sec + " 秒（目標 " + c.sec + " 秒）。"]);
-  else items.push(["warn", (diff > 0 ? "偏長" : "偏短") + "：約 " + n + " 字，估 " + sec + " 秒，目標是 " + c.sec + " 秒，差了 " + Math.abs(sec - c.sec) + " 秒。"]);
+  if(multi){
+    pinfo = parts.map((t,i) => { const pn = countChars(spoken(t)), ps = Math.round(pn / rate), tg = c.parts[i].sec; return { t, n:pn, sec:ps, tg, ad: Math.abs(ps - tg) / tg, diff: ps - tg }; });
+    sc.len = Math.round(pinfo.reduce((a,p) => a + lenScore(p.ad), 0) / K);
+    const off = pinfo.map((p,i) => p.ad > 0.15 ? "第" + (i+1) + "段" + (p.diff > 0 ? "偏長" : "偏短") + "（估 " + p.sec + " 秒，目標 " + p.tg + " 秒）" : "").filter(Boolean);
+    lenOff = off.length > 0;
+    items.push(off.length ? ["warn", off.join("；") + "。"] : ["good", "各段長度合適：" + pinfo.map((p,i) => "第" + (i+1) + "段 " + p.sec + " 秒").join("、") + "，合計 " + sec + " 秒。"]);
+  } else {
+    if(K > 1) items.push(["bad", "設定是分 " + K + " 段講，" + (parts ? "這一版分了 " + parts.length + " 段" : "這一版沒有分段的標題") + "。每一段要用「第1段」「第2段」這樣的標題開頭才認得；長度先用合計算。"]);
+    else if(parts) items.push(["warn", "這一版分了 " + parts.length + " 段，但設定是一段講完；長度用合計算。"]);
+    sc.len = lenScore(ad);
+    if(ad <= 0.15) items.push(["good", "長度合適：約 " + n + " 字，估 " + sec + " 秒（目標 " + c.sec + " 秒）。"]);
+    else items.push(["warn", (diff > 0 ? "偏長" : "偏短") + "：約 " + n + " 字，估 " + sec + " 秒，目標是 " + c.sec + " 秒，差了 " + Math.abs(sec - c.sec) + " 秒。"]);
+  }
   /* 用詞 */
   const hits = []; let pen = 0;
   RISK.forEach(r => {
@@ -636,13 +804,21 @@ function checkOne(v, c){
   /* 下單資訊 */
   const ctaRe = /連結|链接|描述欄|描述栏|說明欄|说明栏|二維碼|二维码|QR|掃碼|扫码|掃描|扫描|電話|电话|撥打|拨打|官網|官网|網站|网站|留言|發送|发送|\.com|\.net|\.us|\.club/i;
   const ctaOk = ctaRe.test(v.text);
-  let k = 0;
+  let codePts = 0;
   if(c.code){
-    k = v.text.toLowerCase().split(c.code.toLowerCase()).length - 1;
-    items.push(k >= 2 ? ["good", "優惠碼 " + c.code + " 講了 " + k + " 次。"] : k === 1 ? ["warn", "優惠碼 " + c.code + " 只講了 1 次，建議結尾前再講一次。"] : ["bad", "沒有講到優惠碼 " + c.code + "。"]);
+    const code = c.code.toLowerCase();
+    if(multi){
+      const miss = pinfo.map((p,i) => p.t.toLowerCase().includes(code) ? 0 : i+1).filter(Boolean);
+      codePts = Math.round(10 * (K - miss.length) / K);
+      items.push(miss.length ? [miss.length === K ? "bad" : "warn", "第" + miss.join("、") + "段沒有講優惠碼 " + c.code + "。分段講的時候每一段都要講到。"] : ["good", "每一段都講了優惠碼 " + c.code + "。"]);
+    } else {
+      const k = v.text.toLowerCase().split(code).length - 1;
+      codePts = k >= 2 ? 10 : k === 1 ? 7 : 0;
+      items.push(k >= 2 ? ["good", "優惠碼 " + c.code + " 講了 " + k + " 次。"] : k === 1 ? ["warn", "優惠碼 " + c.code + " 只講了 1 次，建議結尾前再講一次。"] : ["bad", "沒有講到優惠碼 " + c.code + "。"]);
+    }
   }
   items.push(ctaOk ? ["good", "有講怎麼下單或怎麼參加。"] : ["bad", "沒有講怎麼下單（連結、二維碼、電話等）。"]);
-  sc.cta = c.code ? (ctaOk ? 10 : 0) + (k >= 2 ? 10 : k === 1 ? 7 : 0) : (ctaOk ? 20 : 0);
+  sc.cta = c.code ? (ctaOk ? 10 : 0) + codePts : (ctaOk ? 20 : 0);
   /* 優惠資訊：你填的優惠數字講到幾個；有沒有多出來的數字 */
   const offerNums = [...new Set(digits(c.offer.join(" ")))], said = new Set(digits(say));
   const missing = offerNums.filter(d => !said.has(d));
@@ -653,10 +829,21 @@ function checkOne(v, c){
   if(offerNums.length) items.push(missing.length ? ["warn", "你填的優惠裡，這些數字稿子沒講到：" + missing.join("、")] : ["good", "你填的優惠數字都講到了。"]);
   if(nums.length) items.push(["warn", "這些數字不在你填的優惠資料裡，請核對是不是 AI 自己加的：" + nums.join("、")]);
   /* 結構 */
-  const hasLead = /^\s*引入句?\s*[:：]\s*\S/m.test(v.text), hasRet = /^\s*回正[題题]句?\s*[:：]\s*\S/m.test(v.text);
+  const leadRe = /^\s*引入句?\s*[:：]\s*\S/m, retRe = /^\s*(回正[題题]句?|收尾|結尾|结尾)\s*[:：]\s*\S/m;
   const blank = /〔[^〕]*〕/.test(v.text);
-  sc.form = (hasLead ? 5 : 0) + (hasRet ? 5 : 0) + (blank ? 0 : 5);
-  if(!hasLead || !hasRet) items.push(["warn", "沒有標出" + [hasLead ? "" : "引入句", hasRet ? "" : "回正題句"].filter(Boolean).join("和") + "（要用「引入：」「回正題：」開頭才認得）。"]);
+  if(multi){
+    const nl = pinfo.filter(p => leadRe.test(p.t)).length, nr = pinfo.filter(p => retRe.test(p.t)).length;
+    sc.form = Math.round(5 * nl / K) + Math.round(5 * nr / K) + (blank ? 0 : 5);
+    if(nl < K || nr < K) items.push(["warn", "有的段沒有標出引入句或回正題句（每一段都要用「引入：」「回正題：」開頭才認得）。"]);
+    const rep = [];
+    for(let i = 0; i < K; i++) for(let j = i + 1; j < K; j++) if(jaccard(spoken(pinfo[i].t), spoken(pinfo[j].t)) >= 0.45) rep.push("第" + (i+1) + "段和第" + (j+1) + "段");
+    if(rep.length) items.push(["warn", rep.join("、") + "的內容重複很多，後面的段要換角度或換說法。"]);
+    else items.push(["good", "各段的內容沒有大量重複。"]);
+  } else {
+    const hasLead = leadRe.test(v.text), hasRet = retRe.test(v.text);
+    sc.form = (hasLead ? 5 : 0) + (hasRet ? 5 : 0) + (blank ? 0 : 5);
+    if(!hasLead || !hasRet) items.push(["warn", "沒有標出" + [hasLead ? "" : "引入句", hasRet ? "" : "回正題句"].filter(Boolean).join("和") + "（要用「引入：」「回正題：」開頭才認得）。"]);
+  }
   if(blank) items.push(["warn", "稿子裡還有〔〕留白的地方，要補上才能用。"]);
   let total = sc.len + sc.word + sc.cta + sc.offer + sc.form;
   /* 長度不到目標一半的稿子，其他項目拿滿也不算數：總分按長度比例打折 */
@@ -667,7 +854,7 @@ function checkOne(v, c){
   [...new Set(hits)].sort((a,b) => b.length - a.length).forEach(h => { body = body.split(esc(h)).join("<mark>" + esc(h) + "</mark>"); });
   const part = (label, got, max) => "<span>" + label + " <b>" + got + "</b>/" + max + "</span>";
   const html = '<article class="ver"><header><span class="score">' + total + "<small>分</small></span><b>" + esc(v.name) + "</b>" + (v.angle ? '<span class="angle">' + esc(v.angle) + "</span>" : "") +
-    '<span class="meter"><span class="n' + (ad > 0.15 ? " off" : "") + '">' + sec + " 秒</span><span>" + n + " 字</span></span></header>" +
+    '<span class="meter"><span class="n' + (lenOff ? " off" : "") + '">' + sec + " 秒</span><span>" + (multi ? K + " 段：" + pinfo.map(p => p.sec).join("／") + " 秒" : n + " 字") + "</span></span></header>" +
     '<div class="parts">' + part("長度", sc.len, 25) + part("用詞", sc.word, 25) + part("下單資訊", sc.cta, 20) + part("優惠資訊", sc.offer, 15) + part("結構", sc.form, 15) + "</div>" +
     '<div class="body">' + body + "</div>" +
     '<ul class="findings">' + items.map(it => '<li class="' + it[0] + '"><span class="i" aria-hidden="true">' + ({good:"✓",warn:"!",bad:"✕"}[it[0]]) + "</span><span>" + esc(it[1]) + "</span></li>").join("") + "</ul></article>";
@@ -691,12 +878,22 @@ $("btnClear").addEventListener("click", () => { $("draft").value = ""; $("checkO
 /* ---------- 設定變動 ---------- */
 function onSetup(reset){
   $("fOtherWrap").hidden = $("fCat").value !== "其他產品";
+  const multiMode = (+radio("mode") || 1) > 1;
+  $("partsWrap").hidden = !multiMode; $("slotWrap").hidden = multiMode; $("lenWrap").hidden = multiMode;
   if(reset){ state.offerDirty = state.ctaDirty = state.codeDirty = false; }
   prefill();
   if(reset || !state.picksDirty) resetPicks();
   renderRefs(); buildPrompt();
   store.set("prefs", { ch:$("fCh").value, lang:$("fLang").value, n:$("fN").value });
 }
+document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener("change", () => { renderParts(); state.picksDirty = false; onSetup(false); }));
+$("partsBox").addEventListener("input", e => {
+  const row = e.target.closest(".prow"); if(!row) return;
+  const p = state.plan[+radio("mode")][+row.dataset.i];
+  if(e.target.classList.contains("ppos")) p.pos = e.target.value;
+  if(e.target.classList.contains("psec")) p.sec = Math.min(240, Math.max(10, +e.target.value || p.sec));
+  prefill(); buildPrompt();
+});
 $("fCh").addEventListener("change", () => onSetup(true));
 $("fCat").addEventListener("change", () => onSetup(true));
 document.querySelectorAll('input[name="bucket"]').forEach(r => r.addEventListener("change", () => { $("fSec").value = r.value; onSetup(false); }));
@@ -719,9 +916,10 @@ $("lCat").add(new Option("全部", ""));
 CATS.concat(["抽獎公布"]).forEach(c => $("lCat").add(new Option(c, c)));
 function libFiltered(){
   const ch = $("lCh").value, cat = $("lCat").value, slot = $("lSlot").value, b = $("lBucket").value, f = $("lFocus").value;
-  const q = $("lQ").value.trim().toLowerCase(), sv = $("lSale").value;
+  const q = $("lQ").value.trim().toLowerCase(), sv = $("lSale").value, mv = $("lMode").value;
+  const isMulti = s => (SETINFO[s.id] || {}).n > 1;
   const labs = s => { const m = s.sale || {}; return cat && m[cat] ? [m[cat]] : Object.values(m); };
-  return D.segs.filter(s => (!sv || (sv === "none" ? !labs(s).length : labs(s).includes(sv))) && (!ch || s.ch === ch) && (!cat || s.cats.includes(cat)) && (!slot || s.slot === slot) && (!b || s.bucket === b) && (!f || s.focus.includes(f)) &&
+  return D.segs.filter(s => (!mv || (mv === "m" ? isMulti(s) : !isMulti(s))) && (!sv || (sv === "none" ? !labs(s).length : labs(s).includes(sv))) && (!ch || s.ch === ch) && (!cat || s.cats.includes(cat)) && (!slot || s.slot === slot) && (!b || s.bucket === b) && (!f || s.focus.includes(f)) &&
     (!q || (s.t.join(" ") + " " + s.offer.join(" ") + " " + s.adv + " " + s.title).toLowerCase().includes(q)));
 }
 function renderLib(){
@@ -738,7 +936,7 @@ function renderLib(){
   $("libMoreWrap").hidden = list.length <= state.libLimit;
 }
 $("libNote").innerHTML = SALE_HOW + "沒有標記的口播，是樣本不足、還在等次日銷售或 YouTube 正式觀看數，或不是產品廣告。";
-["lCh","lCat","lSlot","lBucket","lSale","lFocus"].forEach(id => $(id).addEventListener("change", () => { state.libLimit = 30; renderLib(); }));
+["lCh","lCat","lSlot","lBucket","lSale","lMode","lFocus"].forEach(id => $(id).addEventListener("change", () => { state.libLimit = 30; renderLib(); }));
 $("lQ").addEventListener("input", () => { state.libLimit = 30; renderLib(); });
 $("libMore").addEventListener("click", () => { state.libLimit += 30; renderLib(); });
 $("libList").addEventListener("click", e => {
@@ -753,10 +951,15 @@ $("libList").addEventListener("click", e => {
     $("fCh").value = s.ch;
     $("fCat").value = CATS.includes(s.cats[0]) ? s.cats[0] : "其他產品";
     if($("fCat").value === "其他產品") $("fOther").value = s.adv;
+    /* 這段如果是分段講的其中一段，就切到分段講，把整集那一組勾起來 */
+    const si = SETINFO[s.id], want = si && si.n > 1 ? Math.min(3, si.n) : 1;
+    document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = +r.value === want; });
+    renderParts();
     onSetup(true);
-    state.picked.add(s.id); state.picksDirty = true;
+    if(want > 1) state.pickedSets.add(epOf(s)); else state.picked.add(s.id);
+    state.picksDirty = true;
     renderRefs(); buildPrompt(); show("write");
-    const row = document.querySelector('.ref[data-id="' + s.id + '"]'); if(row) row.scrollIntoView({ block:"center" });
+    const row = document.querySelector('.ref[data-id="' + s.id + '"]') || document.querySelector('.ref[data-set="' + epOf(s) + '"]'); if(row) row.scrollIntoView({ block:"center" });
   }
 });
 
